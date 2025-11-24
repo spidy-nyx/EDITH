@@ -1,6 +1,13 @@
 {
-  "buildCommand": "npm install && npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "framework": "vite"
+  "buildCommand": "cd edith-app && npm install && npm run build",
+  "outputDirectory": "edith-app/dist",
+  "devCommand": "cd edith-app && npm run dev",
+  "installCommand": "cd edith-app && npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
