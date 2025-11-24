@@ -80,7 +80,7 @@ export const useEdithStore = create<EdithState>((set, get) => ({
                 model: 'llama-3.1-8b-instant',
                 messages: [{
                   role: 'system',
-                  content: `You are E.D.I.T.H (Even Dead, I'm The Hero), Tony Stark's AI for Spider-Man. Be witty like Tony, nerdy like Peter. Address user as ${getCookie('USER_NAME') || 'SPIDERMAN'}. Keep responses short (2-3 sentences).`
+                  content: `You are E.D.I.T.H (Even Dead, I'm The Hero), Tony Stark's AI for Spider-Man. Be witty like Tony, nerdy like Peter. Address user as ${getCookie('USER_NAME') || 'SPIDERMAN'}. Keep responses short (2-3 sentences). Current date and time: ${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}.`
                 }, {
                   role: 'user',
                   content: command
@@ -122,7 +122,7 @@ export const useEdithStore = create<EdithState>((set, get) => ({
             body: JSON.stringify({
               contents: [{
                 parts: [{
-                  text: `You are E.D.I.T.H (Even Dead, I'm The Hero), Tony Stark's AI. Be witty like Tony, nerdy like Peter. Address user as ${getCookie('USER_NAME') || 'SPIDERMAN'}. Keep responses short (2-3 sentences).\n\nUser: ${command}`
+                  text: `You are E.D.I.T.H (Even Dead, I'm The Hero), Tony Stark's AI. Be witty like Tony, nerdy like Peter. Address user as ${getCookie('USER_NAME') || 'SPIDERMAN'}. Keep responses short (2-3 sentences). Current date and time: ${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}.\n\nUser: ${command}`
                 }]
               }]
             })
@@ -154,7 +154,7 @@ export const useEdithStore = create<EdithState>((set, get) => ({
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                inputs: `You are E.D.I.T.H, Tony Stark's AI. Be witty and call user ${getCookie('USER_NAME') || 'SPIDERMAN'}.\n\nUser: ${command}\nE.D.I.T.H:`,
+                inputs: `You are E.D.I.T.H, Tony Stark's AI. Be witty and call user ${getCookie('USER_NAME') || 'SPIDERMAN'}. Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.\n\nUser: ${command}\nE.D.I.T.H:`,
                 parameters: { max_length: 100 }
               })
             }
@@ -200,7 +200,8 @@ export const useEdithStore = create<EdithState>((set, get) => ({
             role: 'system',
             content: `You are E.D.I.T.H (Even Dead, I'm The Hero), an AI assistant created by Tony Stark for Spider-Man. 
             You are witty, sarcastic like Tony Stark, but also nerdy and enthusiastic like Peter Parker. 
-            Address the user as ${getCookie('USER_NAME') || 'SPIDERMAN'}. Keep responses concise (2-3 sentences max).`
+            Address the user as ${getCookie('USER_NAME') || 'SPIDERMAN'}. Keep responses concise (2-3 sentences max).
+            Current date and time: ${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}.`
           },
           ...newHistory as any
         ],
@@ -280,29 +281,60 @@ export const useEdithStore = create<EdithState>((set, get) => ({
 
 // Text-to-Speech function with voice selection
 function speak(text: string) {
+  // Cancel any ongoing speech
+  speechSynthesis.cancel();
+  
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
   
-  // Get selected voice from cookie
-  const selectedVoiceName = getCookie('SELECTED_VOICE');
-  const voices = speechSynthesis.getVoices();
-  
-  if (selectedVoiceName) {
-    const selectedVoice = voices.find(v => v.name === selectedVoiceName);
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
+  // Function to set voice and speak
+  const setVoiceAndSpeak = () => {
+    const voices = speechSynthesis.getVoices();
+    
+    if (voices.length === 0) {
+      // Voices not loaded yet, wait a bit
+      setTimeout(() => setVoiceAndSpeak(), 100);
+      return;
     }
-  } else {
-    // Default: Try to find a good voice
-    const preferredVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Microsoft'));
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+    
+    // Get selected voice from cookie
+    const selectedVoiceName = getCookie('SELECTED_VOICE');
+    
+    if (selectedVoiceName) {
+      const selectedVoice = voices.find(v => v.name === selectedVoiceName);
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+    } else {
+      // Default: Try to find a good voice
+      const preferredVoice = voices.find(v => 
+        v.name.includes('Google') || 
+        v.name.includes('Microsoft') ||
+        v.name.includes('Samantha') ||
+        v.name.includes('Daniel')
+      );
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
     }
-  }
+    
+    // Add error handling
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+    };
+    
+    utterance.onend = () => {
+      console.log('Speech finished');
+    };
+    
+    // Speak
+    speechSynthesis.speak(utterance);
+  };
   
-  speechSynthesis.speak(utterance);
+  // Start speaking
+  setVoiceAndSpeak();
 }
 
 // Get available voices
