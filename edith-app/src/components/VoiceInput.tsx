@@ -75,14 +75,14 @@ const VoiceInput = () => {
         🎤
       </motion.button>
 
-      {/* Input Display */}
+      {/* Text Input */}
       <div className="flex-1 w-full">
         <motion.div
           className="bg-white/5 rounded-xl p-3 md:p-4 border border-white/10"
           animate={isListening ? { borderColor: 'rgba(220, 20, 60, 0.5)' } : {}}
         >
-          <p className="text-sm md:text-base text-gray-300 text-center md:text-left">
-            {isListening ? (
+          {isListening ? (
+            <p className="text-sm md:text-base text-gray-300 text-center md:text-left">
               <span className="flex items-center justify-center md:justify-start gap-2">
                 <motion.span
                   animate={{ opacity: [1, 0.5, 1] }}
@@ -91,12 +91,33 @@ const VoiceInput = () => {
                   Listening...
                 </motion.span>
               </span>
-            ) : (
-              <span>
-                Click the microphone to speak
-              </span>
-            )}
-          </p>
+            </p>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.currentTarget.querySelector('input') as HTMLInputElement;
+                if (input.value.trim()) {
+                  soundEffects.click();
+                  processCommand(input.value);
+                  input.value = '';
+                }
+              }}
+              className="flex gap-2"
+            >
+              <input
+                type="text"
+                placeholder="Type your message or click mic to speak..."
+                className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none text-sm md:text-base"
+              />
+              <button
+                type="submit"
+                className="text-red-400 hover:text-red-300 text-sm md:text-base font-semibold"
+              >
+                Send
+              </button>
+            </form>
+          )}
         </motion.div>
       </div>
 

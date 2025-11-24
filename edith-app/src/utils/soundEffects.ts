@@ -68,6 +68,12 @@ class SoundEffects {
     setTimeout(() => this.playTone(392.00, 0.15, 0.25), 300); // G4
     setTimeout(() => this.playTone(523.25, 0.3, 0.3), 450); // C5
   }
+
+  // Activate/mode change sound
+  activate() {
+    this.playTone(523.25, 0.08, 0.25); // C5
+    setTimeout(() => this.playTone(659.25, 0.12, 0.25), 80); // E5
+  }
 }
 
 export const soundEffects = new SoundEffects();

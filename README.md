@@ -11,6 +11,7 @@ A Spider-Man themed AI voice assistant built with React, TypeScript, and Electro
 
 ## ✨ Features
 
+### Core Features
 - 🎤 **Voice Recognition** - Click to speak, get AI responses
 - 🤖 **Multiple AI Providers** - Groq (fastest), Google Gemini, or Demo mode
 - 🎨 **Animated UI** - JARVIS-style visualization with dynamic animations
@@ -20,6 +21,77 @@ A Spider-Man themed AI voice assistant built with React, TypeScript, and Electro
 - 💾 **Persistent Storage** - Settings saved in browser cookies
 - 📱 **Mobile Responsive** - Works on phones, tablets, and desktops
 - ⚡ **Electron App** - Run as a desktop application
+
+### Phase 2 Features ✨
+- 🎭 **AI Personality Modes**
+  - 🦾 **Tony Stark** - Sarcastic, witty, genius billionaire
+  - 🕷️ **Peter Parker** - Friendly, nerdy, neighborhood hero
+  - 💼 **Professional** - Formal, efficient, business-like
+  - 🎉 **Fun Mode** - Playful, entertaining, full of jokes
+- ⚡ **Quick Commands**
+  - `/time` - Get current time instantly
+  - `/date` - Get today's date
+  - `/joke` - Random Spider-Man/Iron Man jokes
+  - `/help` - Show all available commands
+- 📊 **Dashboard & Stats**
+  - Total messages & conversations tracked
+  - Days active since first use
+  - Average messages per day
+  - Recent activity feed
+  - Real-time personality indicator
+
+### Phase 3 Features 🔥
+- 🔍 **Web Search**
+  - DuckDuckGo integration (free, no API key)
+  - Real-time search results
+  - Automatic summarization
+  - Related topics
+- 🌤️ **Weather**
+  - Location-based weather data
+  - Current temperature & conditions
+  - Wind speed & weather icons
+  - Open-Meteo API (free)
+- 📰 **News**
+  - Latest headlines from NY Times
+  - Multiple categories (tech, science, business, sports)
+  - Top 5 articles with summaries
+  - RSS feed integration
+- 📅 **Calendar & Reminders**
+  - Natural language reminder creation
+  - Browser notifications
+  - Overdue & upcoming tracking
+  - Complete/delete reminders
+  - Visual reminder panel
+  - Cookie-based persistence
+
+### Phase 4 Features 🕷️ NEW!
+- 🎬 **MCU Easter Eggs**
+  - 10+ iconic MCU quotes with context
+  - 10+ character facts (Spider-Man, Iron Man, E.D.I.T.H)
+  - Hidden easter egg triggers in chat
+  - Automatic detection and responses
+  - Secret achievement unlocks
+- 🎯 **Trivia & Facts**
+  - Random quote generator
+  - Random fact generator
+  - Character-specific information
+  - Movie context included
+- 🎮 **MCU Trivia Game**
+  - 15+ trivia questions
+  - 3 difficulty levels (easy, medium, hard)
+  - 4 categories (Spider-Man, Iron Man, MCU, E.D.I.T.H)
+  - Multiple choice format
+  - Instant feedback with fun facts
+  - Score tracking & streak system
+  - Accuracy percentage
+- 🏆 **Achievements System**
+  - 16 total achievements
+  - 12 regular + 4 secret achievements
+  - Progress tracking with percentage
+  - Unlock timestamps
+  - Visual achievement cards
+  - Statistics display
+  - Cookie-based persistence
 
 ## 🚀 Quick Start
 
@@ -69,10 +141,29 @@ npm run electron:dev
 
 ### Using E.D.I.T.H
 
-1. Click the 🎤 microphone button
-2. Speak your command
-3. E.D.I.T.H will respond with voice and text
-4. Watch the animated visualization react to different states
+1. **View Dashboard** - See your usage stats and current personality
+2. **Select Personality** - Choose Tony, Peter, Professional, or Fun mode
+3. **Click Microphone** - Press the 🎤 button to speak
+4. **Speak Command** - Say your question or use quick commands
+5. **Get Response** - E.D.I.T.H responds with voice and text
+6. **Watch Animation** - Visualization reacts to different states
+
+### Quick Commands
+
+Type or say these commands for instant responses:
+
+**Basic Commands:**
+- `/time` - Current time
+- `/date` - Today's date
+- `/joke` - Random joke
+- `/help` - All commands
+
+**Phase 3 Commands:**
+- `/weather` - Local weather
+- `/search <query>` - Web search
+- `/news [category]` - Latest news
+- `/remind me to <task> in <time>` - Set reminder
+- `/reminders` - Check reminders
 
 ### Getting Free API Keys
 

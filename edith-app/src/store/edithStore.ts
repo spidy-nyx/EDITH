@@ -2,20 +2,52 @@ import { create } from 'zustand';
 import OpenAI from 'openai';
 import { getCookie, setCookie } from '../utils/cookies';
 import { soundEffects } from '../utils/soundEffects';
+import { getPersonalityPrompt } from '../utils/personalities';
+import { searchWeb, summarizeSearchResults } from '../utils/webSearch';
+import { getWeather, formatWeatherResponse } from '../utils/weather';
+import { getNews, summarizeNews } from '../utils/news';
+import { ReminderManager, parseReminderCommand } from '../utils/reminders';
+import { checkForEasterEgg } from '../utils/mcuData';
+import { AchievementManager } from '../utils/achievements';
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+type PersonalityMode = 'tony' | 'peter' | 'professional' | 'fun';
 
 interface EdithState {
   status: 'READY' | 'LISTENING' | 'PROCESSING' | 'SPEAKING';
   lastResponse: string;
   newsItems: string[];
   conversationHistory: Array<{ role: string; content: string }>;
+  chatHistory: ChatMessage[];
   openai: OpenAI | null;
   selectedVoice: string | null;
+  theme: 'spiderman' | 'ironman' | 'venom';
+  volume: number;
+  isMuted: boolean;
+  personality: PersonalityMode;
+  stats: {
+    totalConversations: number;
+    totalMessages: number;
+    startDate: number;
+  };
   
   initializeAI: () => void;
   processCommand: (command: string) => Promise<void>;
   updateStatus: (status: EdithState['status']) => void;
   addNewsItem: (item: string) => void;
   setVoice: (voiceName: string) => void;
+  addChatMessage: (role: 'user' | 'assistant', content: string) => void;
+  clearChatHistory: () => void;
+  setTheme: (theme: 'spiderman' | 'ironman' | 'venom') => void;
+  setVolume: (volume: number) => void;
+  toggleMute: () => void;
+  setPersonality: (personality: PersonalityMode) => void;
+  incrementStats: () => void;
 }
 
 export const useEdithStore = create<EdithState>((set, get) => ({
@@ -28,7 +60,13 @@ export const useEdithStore = create<EdithState>((set, get) => ({
     'READY FOR COMMANDS'
   ],
   conversationHistory: [],
+  chatHistory: JSON.parse(getCookie('CHAT_HISTORY') || '[]'),
   selectedVoice: getCookie('SELECTED_VOICE') || null,
+  theme: (getCookie('THEME') as 'spiderman' | 'ironman' | 'venom') || 'spiderman',
+  volume: parseFloat(getCookie('VOLUME') || '1'),
+  isMuted: getCookie('IS_MUTED') === 'true',
+  personality: (getCookie('PERSONALITY') as PersonalityMode) || 'tony',
+  stats: JSON.parse(getCookie('STATS') || '{"totalConversations":0,"totalMessages":0,"startDate":' + Date.now() + '}'),
   openai: null,
 
   initializeAI: () => {
@@ -50,11 +88,45 @@ export const useEdithStore = create<EdithState>((set, get) => ({
   },
 
   processCommand: async (command: string) => {
-    const { openai, conversationHistory } = get();
+    const { openai, conversationHistory, personality } = get();
+    
+    // Check for easter eggs first
+    const easterEgg = checkForEasterEgg(command);
+    if (easterEgg) {
+      soundEffects.success();
+      set({ status: 'SPEAKING', lastResponse: easterEgg });
+      get().addNewsItem(`E.D.I.T.H: ${easterEgg}`);
+      get().addChatMessage('assistant', easterEgg);
+      speak(easterEgg);
+      
+      // Track easter egg achievements
+      AchievementManager.incrementStat('easterEggsFound');
+      if (command.toLowerCase().includes('with great power')) {
+        AchievementManager.unlockAchievement('with_great_power');
+      } else if (command.toLowerCase().includes('i am iron man')) {
+        AchievementManager.unlockAchievement('i_am_iron_man');
+      } else if (command.toLowerCase().includes('i love you 3000')) {
+        AchievementManager.unlockAchievement('love_3000');
+      }
+      
+      setTimeout(() => set({ status: 'READY' }), 3000);
+      return;
+    }
+    
+    // Handle quick commands
+    if (command.startsWith('/')) {
+      handleQuickCommand(command);
+      return;
+    }
+    
+    // First chat achievement
+    AchievementManager.checkAndUnlock('first_chat');
     
     soundEffects.processing();
     set({ status: 'PROCESSING' });
     get().addNewsItem(`User: ${command}`);
+    get().addChatMessage('user', command);
+    get().incrementStats();
 
     try {
       // Check cookies first, then env
@@ -80,7 +152,7 @@ export const useEdithStore = create<EdithState>((set, get) => ({
                 model: 'llama-3.1-8b-instant',
                 messages: [{
                   role: 'system',
-                  content: `You are E.D.I.T.H (Even Dead, I'm The Hero), Tony Stark's AI for Spider-Man. Be witty like Tony, nerdy like Peter. Address user as ${getCookie('USER_NAME') || 'SPIDERMAN'}. Keep responses short (2-3 sentences). Current date and time: ${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}.`
+                  content: `${getPersonalityPrompt(personality, getCookie('USER_NAME') || 'SPIDERMAN')} Keep responses short (2-3 sentences). Current date and time: ${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}.`
                 }, {
                   role: 'user',
                   content: command
@@ -122,7 +194,7 @@ export const useEdithStore = create<EdithState>((set, get) => ({
             body: JSON.stringify({
               contents: [{
                 parts: [{
-                  text: `You are E.D.I.T.H (Even Dead, I'm The Hero), Tony Stark's AI. Be witty like Tony, nerdy like Peter. Address user as ${getCookie('USER_NAME') || 'SPIDERMAN'}. Keep responses short (2-3 sentences). Current date and time: ${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}.\n\nUser: ${command}`
+                  text: `${getPersonalityPrompt(personality, getCookie('USER_NAME') || 'SPIDERMAN')} Keep responses short (2-3 sentences). Current date and time: ${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}.\n\nUser: ${command}`
                 }]
               }]
             })
@@ -198,10 +270,7 @@ export const useEdithStore = create<EdithState>((set, get) => ({
         messages: [
           {
             role: 'system',
-            content: `You are E.D.I.T.H (Even Dead, I'm The Hero), an AI assistant created by Tony Stark for Spider-Man. 
-            You are witty, sarcastic like Tony Stark, but also nerdy and enthusiastic like Peter Parker. 
-            Address the user as ${getCookie('USER_NAME') || 'SPIDERMAN'}. Keep responses concise (2-3 sentences max).
-            Current date and time: ${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}.`
+            content: `${getPersonalityPrompt(personality, getCookie('USER_NAME') || 'SPIDERMAN')} Keep responses concise (2-3 sentences max). Current date and time: ${new Date().toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}.`
           },
           ...newHistory as any
         ],
@@ -276,8 +345,195 @@ export const useEdithStore = create<EdithState>((set, get) => ({
   setVoice: (voiceName) => {
     set({ selectedVoice: voiceName });
     setCookie('SELECTED_VOICE', voiceName, 365);
+  },
+
+  addChatMessage: (role, content) => {
+    const { chatHistory } = get();
+    const newMessage: ChatMessage = {
+      role,
+      content,
+      timestamp: Date.now()
+    };
+    const updatedHistory = [...chatHistory, newMessage];
+    set({ chatHistory: updatedHistory });
+    setCookie('CHAT_HISTORY', JSON.stringify(updatedHistory.slice(-50)), 365); // Keep last 50 messages
+  },
+
+  clearChatHistory: () => {
+    set({ chatHistory: [] });
+    setCookie('CHAT_HISTORY', '[]', 365);
+  },
+
+  setTheme: (theme) => {
+    set({ theme });
+    setCookie('THEME', theme, 365);
+    document.documentElement.setAttribute('data-theme', theme);
+  },
+
+  setVolume: (volume) => {
+    set({ volume, isMuted: false });
+    setCookie('VOLUME', volume.toString(), 365);
+    setCookie('IS_MUTED', 'false', 365);
+  },
+
+  toggleMute: () => {
+    const { isMuted } = get();
+    set({ isMuted: !isMuted });
+    setCookie('IS_MUTED', (!isMuted).toString(), 365);
+  },
+
+  setPersonality: (personality) => {
+    set({ personality });
+    setCookie('PERSONALITY', personality, 365);
+    soundEffects.activate();
+    const userName = getCookie('USER_NAME') || 'SPIDERMAN';
+    const messages = {
+      tony: `Personality updated to Tony Stark mode. Let's get to work, ${userName}.`,
+      peter: `Hey ${userName}! Switched to Peter Parker mode. Ready to help!`,
+      professional: `Professional mode activated, ${userName}. How may I assist you?`,
+      fun: `Fun mode ON! 🎉 Let's have some fun, ${userName}!`
+    };
+    get().addNewsItem(messages[personality]);
+    
+    // Track personality usage for achievement
+    AchievementManager.incrementStat('personalityUsed', personality);
+  },
+
+  incrementStats: () => {
+    const { stats } = get();
+    const newStats = {
+      ...stats,
+      totalMessages: stats.totalMessages + 1,
+      totalConversations: stats.totalConversations + (stats.totalMessages === 0 ? 1 : 0)
+    };
+    set({ stats: newStats });
+    setCookie('STATS', JSON.stringify(newStats), 365);
   }
 }));
+
+// Quick Commands Handler
+async function handleQuickCommand(command: string) {
+  const store = useEdithStore.getState();
+  const userName = getCookie('USER_NAME') || 'SPIDERMAN';
+  let response = '';
+
+  soundEffects.activate();
+  store.updateStatus('PROCESSING');
+
+  const cmd = command.toLowerCase();
+  const args = cmd.split(' ').slice(1).join(' ');
+  
+  // Track command usage for achievement
+  AchievementManager.incrementStat('commandUsed', cmd.split(' ')[0]);
+
+  try {
+    switch (true) {
+      case cmd === '/time':
+        const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+        response = `It's ${time}, ${userName}!`;
+        break;
+
+      case cmd === '/date':
+        const date = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        response = `Today is ${date}, web-head!`;
+        break;
+
+      case cmd === '/weather':
+        store.addNewsItem('Fetching weather data...');
+        const weather = await getWeather();
+        if (weather) {
+          response = formatWeatherResponse(weather);
+          AchievementManager.checkAndUnlock('weather_check');
+        } else {
+          response = `Couldn't get weather data, ${userName}. Location access might be blocked.`;
+        }
+        break;
+
+      case cmd.startsWith('/search '):
+        if (!args) {
+          response = 'Usage: /search <query>. Example: /search Spider-Man';
+          break;
+        }
+        store.addNewsItem(`Searching for: ${args}...`);
+        const results = await searchWeb(args);
+        response = summarizeSearchResults(results);
+        if (results.length > 0) {
+          response += `\n\nTop result: ${results[0].url}`;
+        }
+        AchievementManager.checkAndUnlock('web_searcher');
+        break;
+
+      case cmd.startsWith('/news'):
+        const category = args || 'general';
+        store.addNewsItem(`Fetching ${category} news...`);
+        const articles = await getNews(category);
+        response = summarizeNews(articles);
+        AchievementManager.checkAndUnlock('news_reader');
+        break;
+
+      case cmd.startsWith('/remind'):
+        const reminderData = parseReminderCommand(command);
+        if (reminderData) {
+          const reminder = ReminderManager.addReminder(
+            reminderData.title,
+            '',
+            reminderData.date
+          );
+          response = `✅ Reminder set: "${reminder.title}" at ${reminderData.date.toLocaleString()}`;
+        } else {
+          response = 'Usage: /remind me to <task> in <time>. Example: /remind me to call mom in 2 hours';
+        }
+        break;
+
+      case cmd === '/reminders':
+        response = ReminderManager.checkReminders();
+        const upcoming = ReminderManager.getUpcomingReminders();
+        if (upcoming.length > 1) {
+          response += `\n\nYou have ${upcoming.length} total reminders.`;
+        }
+        break;
+
+      case cmd === '/joke':
+        const jokes = [
+          "Why did Spider-Man join the computer class? To improve his web design! 🕸️",
+          "What's Spider-Man's favorite month? Web-ruary! 😄",
+          "Why doesn't Spider-Man use the internet? Too many bugs in the web! 🐛",
+          "How does Spider-Man communicate? Through the world wide web! 🌐",
+          "What's Iron Man's favorite drink? Rust-proof coffee! ☕"
+        ];
+        response = jokes[Math.floor(Math.random() * jokes.length)];
+        break;
+
+      case cmd === '/help':
+        response = `Quick Commands:
+/time - Current time
+/date - Today's date
+/weather - Local weather
+/search <query> - Web search
+/news [category] - Latest news
+/remind me to <task> in <time> - Set reminder
+/reminders - Check reminders
+/joke - Random joke
+/help - This menu
+
+Just speak naturally for AI chat!`;
+        break;
+
+      default:
+        response = `Unknown command: ${command}. Type /help for available commands.`;
+    }
+  } catch (error) {
+    console.error('Command error:', error);
+    response = `Error executing command: ${command}. Try again or type /help.`;
+  }
+
+  store.addNewsItem(`E.D.I.T.H: ${response}`);
+  store.addChatMessage('assistant', response);
+  store.updateStatus('SPEAKING');
+  speak(response);
+  
+  setTimeout(() => store.updateStatus('READY'), 2000);
+}
 
 // Text-to-Speech function with voice selection
 function speak(text: string) {

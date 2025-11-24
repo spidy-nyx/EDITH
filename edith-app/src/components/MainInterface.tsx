@@ -3,12 +3,20 @@ import { useState } from 'react';
 import EdithVisualization from './EdithVisualization';
 import VoiceInput from './VoiceInput';
 import SettingsModal from './SettingsModal';
+import Dashboard from './Dashboard';
+import PersonalitySelector from './PersonalitySelector';
+import RemindersPanel from './RemindersPanel';
+import TriviaGame from './TriviaGame';
+import AchievementsPanel from './AchievementsPanel';
+import EasterEggsPanel from './EasterEggsPanel';
 import { useEdithStore } from '../store/edithStore';
 import { getCookie } from '../utils/cookies';
 
 const MainInterface = () => {
   const { status, lastResponse, newsItems } = useEdithStore();
   const [showSettings, setShowSettings] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [showGames, setShowGames] = useState(false);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -54,6 +62,34 @@ const MainInterface = () => {
               <p className="text-sm md:text-base text-gray-400">Even Dead, I'm The Hero</p>
             </div>
             <div className="flex items-center gap-3 md:gap-4">
+              <motion.button
+                onClick={() => {
+                  setShowDashboard(!showDashboard);
+                  setShowGames(false);
+                }}
+                className={`glass px-4 py-2 rounded-lg border transition-all flex items-center gap-2 ${
+                  showDashboard ? 'border-red-500/50 bg-red-500/10' : 'border-white/10 hover:border-red-500/50'
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span className="text-lg">📊</span>
+                <span className="text-sm font-medium hidden md:inline">Dashboard</span>
+              </motion.button>
+              <motion.button
+                onClick={() => {
+                  setShowGames(!showGames);
+                  setShowDashboard(false);
+                }}
+                className={`glass px-4 py-2 rounded-lg border transition-all flex items-center gap-2 ${
+                  showGames ? 'border-blue-500/50 bg-blue-500/10' : 'border-white/10 hover:border-blue-500/50'
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span className="text-lg">🎮</span>
+                <span className="text-sm font-medium hidden md:inline">Games</span>
+              </motion.button>
               <div className="flex items-center gap-2">
                 <motion.div
                   className={`w-3 h-3 rounded-full ${
@@ -73,6 +109,38 @@ const MainInterface = () => {
             </div>
           </div>
         </motion.header>
+
+        {/* Dashboard & Personality - Collapsible */}
+        {showDashboard && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Dashboard />
+              <PersonalitySelector />
+            </div>
+            <RemindersPanel />
+          </motion.div>
+        )}
+
+        {/* Games & Fun - Collapsible */}
+        {showGames && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TriviaGame />
+              <AchievementsPanel />
+            </div>
+            <EasterEggsPanel />
+          </motion.div>
+        )}
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -97,7 +165,7 @@ const MainInterface = () => {
             </div>
           </motion.div>
 
-          {/* Center Panel - JARVIS */}
+          {/* Center Panel - EDITH */}
           <motion.div
             className="lg:col-span-2 glass rounded-2xl p-6 md:p-8 flex flex-col min-h-[500px]"
             variants={itemVariants}
